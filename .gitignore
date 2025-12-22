@@ -1,0 +1,103 @@
+# ===========================
+# Smart Contracts (Foundry)
+# ===========================
+
+hash-signarure-ctrt/lib/
+
+# Compiler files
+hash-signarure-ctrt/cache/
+hash-signarure-ctrt/out/
+
+# Broadcast logs (mantener estructura pero ignorar dry-run y localhost)
+hash-signarure-ctrt/broadcast/*/31337/
+hash-signarure-ctrt/broadcast/**/dry-run/
+
+# ===========================
+# dApp - nextjs-ui-hashsignature/web-hash-signature (Next.js)
+# ===========================
+
+# Dependencies
+nextjs-ui-hashsignature/web-hash-signature/node_modules/
+nextjs-ui-hashsignature/web-hash-signature/.pnp
+nextjs-ui-hashsignature/web-hash-signature/.pnp.js
+
+# Testing
+nextjs-ui-hashsignature/web-hash-signature/coverage/
+nextjs-ui-hashsignature/web-hash-signature/.nyc_output
+
+# Next.js
+nextjs-ui-hashsignature/web-hash-signature/.next/
+nextjs-ui-hashsignature/web-hash-signature/out/
+nextjs-ui-hashsignature/web-hash-signature/build/
+nextjs-ui-hashsignature/web-hash-signature/dist/
+
+# Production
+nextjs-ui-hashsignature/web-hash-signature/build
+
+# Misc
+nextjs-ui-hashsignature/web-hash-signature/.DS_Store
+nextjs-ui-hashsignature/web-hash-signature/*.pem
+
+# Debug
+nextjs-ui-hashsignature/web-hash-signature/npm-debug.log*
+nextjs-ui-hashsignature/web-hash-signature/yarn-debug.log*
+nextjs-ui-hashsignature/web-hash-signature/yarn-error.log*
+
+# Local env files
+nextjs-ui-hashsignature/web-hash-signature/.env*.local
+nextjs-ui-hashsignature/web-hash-signature/.env.local
+nextjs-ui-hashsignature/web-hash-signature/.env.development.local
+nextjs-ui-hashsignature/web-hash-signature/.env.test.local
+nextjs-ui-hashsignature/web-hash-signature/.env.production.local
+
+# Vercel
+nextjs-ui-hashsignature/web-hash-signature/.vercel
+
+# Typescript
+nextjs-ui-hashsignature/web-hash-signature/*.tsbuildinfo
+nextjs-ui-hashsignature/web-hash-signature/next-env.d.ts
+# ===========================
+# General
+# ===========================
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Package managers
+node_modules/
+.pnpm-store/
+.yarn/
+!.yarn/releases
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output/
+
