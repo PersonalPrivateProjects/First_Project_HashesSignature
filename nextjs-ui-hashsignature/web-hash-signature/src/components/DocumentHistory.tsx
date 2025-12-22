@@ -1,8 +1,8 @@
-'use client'
+"use client"
 
-import { useRef, useState, useEffect } from 'react'
-import { Hash, Clock, User, AlertCircle, Loader2, RefreshCw, FileText } from 'lucide-react'
-import { useContract } from '../hooks/useContract'
+import { useRef, useState, useEffect } from "react"
+import { Hash, Clock, User, AlertCircle, Loader2, RefreshCw, FileText, Database } from "lucide-react"
+import { useContract } from "../hooks/useContract"
 
 export function DocumentHistory() {
   const { getDocumentCount, getDocumentHashByIndex, getDocumentInfo } = useContract()
@@ -14,7 +14,7 @@ export function DocumentHistory() {
   const loadDocuments = async () => {
     setIsLoading(true)
     setError(null)
- 
+
     try {
       const count = await getDocumentCount()
       console.log("Document count:", count)
@@ -26,158 +26,153 @@ export function DocumentHistory() {
         const info = await getDocumentInfo(hash)
         docs.push({
           ...info,
-          hash
+          hash,
         })
       }
 
       setDocuments(docs)
     } catch (error: any) {
-      setError(error.message || 'Failed to load documents')
+      setError(error.message || "Failed to load documents")
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-   if (buttonRef.current) {
-     console.log("Auto-loading documentos validados al montar el componente");
-     setTimeout(() => {
-       buttonRef.current?.click();
-     }, 500);    
-     }
+    if (buttonRef.current) {
+      console.log("Auto-loading documentos validados al montar el componente")
+      setTimeout(() => {
+        buttonRef.current?.click()
+      }, 500)
+    }
   }, [])
 
   return (
     <div className="space-y-6">
-
-      {/* Load Button */}
       <div className="flex justify-center">
         <button
           ref={buttonRef}
           onClick={loadDocuments}
           disabled={isLoading}
-          className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
+          className="relative group/btn overflow-hidden"
         >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Loading...</span>
-            </>
-          ) : (
-            <>
-              <RefreshCw className="w-4 h-4" />
-              <span>Refresh</span>
-            </>
-          )}
+          <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg opacity-70 group-hover/btn:opacity-100 blur transition-all duration-300"></div>
+          <div className="relative flex items-center gap-3 px-8 py-3.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin text-white" />
+                <span className="text-sm font-mono font-semibold text-white uppercase tracking-wider">Loading...</span>
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-5 h-5 text-white" />
+                <span className="text-sm font-mono font-semibold text-white uppercase tracking-wider">Refresh</span>
+              </>
+            )}
+          </div>
         </button>
       </div>
 
-      {/* Error Display */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-          <div className="flex items-center space-x-3">
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-            <span className="text-red-800 dark:text-red-200 font-medium">
-              {error}
-            </span>
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-rose-500/10 border border-rose-500/30 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-rose-400" />
+            </div>
+            <span className="text-sm font-mono text-rose-400">{error}</span>
           </div>
         </div>
       )}
 
-      {/* Documents List */}
       {isLoading ? (
-        <div className="text-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600 dark:text-gray-300">Loading documents...</p>
+        <div className="text-center py-20">
+          <div className="relative inline-block mb-6">
+            <div className="absolute inset-0 bg-blue-500 rounded-full blur-2xl opacity-20 animate-pulse"></div>
+            <div className="relative p-6 bg-slate-900 border border-blue-500/30 rounded-full">
+              <Loader2 className="w-12 h-12 animate-spin text-blue-400" />
+            </div>
+          </div>
+          <p className="text-sm font-mono text-slate-400">Fetching blockchain records...</p>
         </div>
       ) : documents.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FileText className="w-8 h-8 text-gray-400" />
+        <div className="text-center py-20">
+          <div className="relative inline-block mb-6">
+            <div className="absolute inset-0 bg-slate-500 rounded-full blur-2xl opacity-10"></div>
+            <div className="relative p-6 bg-slate-900 border border-slate-700 rounded-full">
+              <Database className="w-12 h-12 text-slate-500" />
+            </div>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            No Documents Found
-          </h3>
-          <p className="text-gray-600 dark:text-gray-300">
-            No documents have been stored in the registry yet.
-          </p>
+          <h3 className="text-lg font-mono font-bold text-white mb-2">NO DOCUMENTS</h3>
+          <p className="text-sm text-slate-400 max-w-md mx-auto">The registry is empty</p>
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Documents ({documents.length})
-            </h4>
+          {/* Header del registro */}
+          <div className="flex items-center justify-between px-1">
+            <h4 className="text-lg font-mono font-bold text-white uppercase tracking-wider">Registry</h4>
+            <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-blue-500/30 rounded-full">
+              <FileText className="w-4 h-4 text-blue-400" />
+              <span className="text-sm font-mono font-bold text-blue-400">{documents.length}</span>
+            </div>
           </div>
-          
+
+          {/* Lista de documentos con diseño tipo blockchain */}
           {documents.map((doc, index) => (
-            <div key={index} className="bg-white dark:bg-gray-700 rounded-lg p-6 border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <h5 className="font-semibold text-gray-900 dark:text-white">
-                      Document #{index + 1}
-                    </h5>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Stored on blockchain
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2 bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-xs font-medium text-green-800 dark:text-green-200">
-                    Verified
-                  </span>
-                </div>
-              </div>
+            <div key={index} className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl opacity-0 group-hover:opacity-20 blur transition-all duration-300"></div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Hash */}
-                <div>
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Hash className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Document Hash
-                    </span>
+              <div className="relative bg-slate-950 border border-slate-800 rounded-xl overflow-hidden hover:border-slate-700 transition-all">
+                {/* Header del documento */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900">
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-blue-500 rounded-md blur-md opacity-50"></div>
+                      <div className="relative p-2 bg-slate-900 border border-blue-500/30 rounded-md">
+                        <FileText className="w-5 h-5 text-blue-400" />
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="font-mono font-bold text-white">DOC #{index + 1}</h5>
+                      <p className="text-xs text-slate-500 font-mono">Blockchain Verified</p>
+                    </div>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded p-3 border border-gray-200 dark:border-gray-600">
-                    <code className="text-xs font-mono text-gray-900 dark:text-white break-all">
-                      {doc.hash}
-                    </code>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-slate-900 border border-emerald-500/30 rounded-full">
+                    <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-mono text-emerald-400">VERIFIED</span>
                   </div>
                 </div>
 
-                {/* Signer */}
-                <div>
-                  <div className="flex items-center space-x-2 mb-2">
-                    <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Signer Address
-                    </span>
+                {/* Contenido del documento */}
+                <div className="p-6 space-y-4">
+                  {/* Hash */}
+                  <div className="bg-slate-900 rounded-lg p-4 border border-slate-800">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Hash className="w-3.5 h-3.5 text-slate-500" />
+                      <span className="text-xs font-mono uppercase tracking-wider text-slate-500">Hash</span>
+                    </div>
+                    <code className="block text-xs font-mono text-slate-300 break-all leading-relaxed">{doc.hash}</code>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded p-3 border border-gray-200 dark:border-gray-600">
-                    <code className="text-xs font-mono text-gray-900 dark:text-white break-all">
-                      {doc.signer}
-                    </code>
-                  </div>
-                </div>
-              </div>
 
-              {/* Timestamp */}
-              <div className="mt-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Clock className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Timestamp
-                  </span>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 rounded p-3 border border-gray-200 dark:border-gray-600">
-                  <span className="text-sm text-gray-900 dark:text-white">
-                    {new Date(Number(doc.timestamp) * 1000).toLocaleString()}
-                  </span>
+                  {/* Grid de info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-slate-900 rounded-lg p-4 border border-slate-800">
+                      <div className="flex items-center gap-2 mb-2">
+                        <User className="w-3.5 h-3.5 text-slate-500" />
+                        <span className="text-xs font-mono uppercase tracking-wider text-slate-500">Signer</span>
+                      </div>
+                      <code className="block text-xs font-mono text-slate-300 break-all">{doc.signer}</code>
+                    </div>
+
+                    <div className="bg-slate-900 rounded-lg p-4 border border-slate-800">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="w-3.5 h-3.5 text-slate-500" />
+                        <span className="text-xs font-mono uppercase tracking-wider text-slate-500">Time</span>
+                      </div>
+                      <span className="block text-sm font-mono text-slate-300">
+                        {new Date(Number(doc.timestamp) * 1000).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
