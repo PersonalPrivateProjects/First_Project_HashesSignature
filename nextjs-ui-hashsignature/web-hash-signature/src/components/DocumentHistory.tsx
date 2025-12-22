@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { History, Hash, Clock, User, AlertCircle, Loader2, RefreshCw, FileText } from 'lucide-react'
+import { useRef, useState, useEffect } from 'react'
+import { Hash, Clock, User, AlertCircle, Loader2, RefreshCw, FileText } from 'lucide-react'
 import { useContract } from '../hooks/useContract'
 
 export function DocumentHistory() {
@@ -9,13 +9,16 @@ export function DocumentHistory() {
   const [documents, setDocuments] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   const loadDocuments = async () => {
     setIsLoading(true)
     setError(null)
-
+ 
     try {
       const count = await getDocumentCount()
+      console.log("Document count:", count)
+
       const docs = []
 
       for (let i = 0; i < count; i++) {
@@ -36,7 +39,12 @@ export function DocumentHistory() {
   }
 
   useEffect(() => {
-    loadDocuments()
+   if (buttonRef.current) {
+     console.log("Auto-loading documentos validados al montar el componente");
+     setTimeout(() => {
+       buttonRef.current?.click();
+     }, 500);    
+     }
   }, [])
 
   return (
@@ -45,6 +53,7 @@ export function DocumentHistory() {
       {/* Load Button */}
       <div className="flex justify-center">
         <button
+          ref={buttonRef}
           onClick={loadDocuments}
           disabled={isLoading}
           className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
