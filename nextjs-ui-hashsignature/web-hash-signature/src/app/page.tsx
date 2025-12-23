@@ -1,57 +1,71 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { useMetaMask } from '../hooks/useMetaMask'
-import { FileUploader } from '../components/FileUploader'
-import { DocumentSigner } from '../components/DocumentSigner'
-import { DocumentVerifier } from '../components/DocumentVerifier'
-import { DocumentHistory } from '../components/DocumentHistory'
-import { FileText, Shield, CheckCircle, History, Wallet, AlertCircle } from 'lucide-react'
+import { useState, useEffect } from "react"
+import { useMetaMask } from "../hooks/useMetaMask"
+import { FileUploader } from "../components/FileUploader"
+import { DocumentSigner } from "../components/DocumentSigner"
+import { DocumentVerifier } from "../components/DocumentVerifier"
+import { DocumentHistory } from "../components/DocumentHistory"
+import { FileText, Shield, CheckCircle, History, Wallet, AlertCircle } from "lucide-react"
+import { useTheme } from "next-themes"
+import clsx from "clsx"
 
 export default function Home() {
-  const { account, isConnected, connect, disconnect, isConnecting, error, switchWallet, currentWalletIndex, availableWallets } = useMetaMask()
-  const [activeTab, setActiveTab] = useState<'upload' | 'verify' | 'history'>('upload')
-  const [documentHash, setDocumentHash] = useState<string>('')
+  const {
+    account,
+    isConnected,
+    connect,
+    disconnect,
+    isConnecting,
+    error,
+    switchWallet,
+    currentWalletIndex,
+    availableWallets,
+  } = useMetaMask()
+  const [activeTab, setActiveTab] = useState<"upload" | "verify" | "history">("upload")
+  const [documentHash, setDocumentHash] = useState<string>("")
   const [showWalletSelector, setShowWalletSelector] = useState(false)
-
-  // Debug info
-  useEffect(() => {
-    console.log('MetaMask Status:', { account, isConnected, isConnecting, error })
-  }, [account, isConnected, isConnecting, error])
-
-  // Close wallet selector when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement
-      if (showWalletSelector && !target.closest('.wallet-selector-container')) {
-        setShowWalletSelector(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showWalletSelector])
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
 
   const tabs = [
-    { id: 'upload', label: 'Upload & Sign', icon: FileText, description: 'Upload files and sign them with your wallet' },
-    { id: 'verify', label: 'Verify', icon: Shield, description: 'Verify document authenticity' },
-    { id: 'history', label: 'History', icon: History, description: 'View document history' }
+    { id: "upload", label: "Upload", description: "Upload a document", icon: FileText },
+    { id: "verify", label: "Verify", description: "Verify a document", icon: Shield },
+    { id: "history", label: "History", description: "View document history", icon: History },
   ]
 
   const handleFileHash = (hash: string) => {
     setDocumentHash(hash)
   }
 
-  const handleSigned = (signature: string, timestamp: number) => {
-    console.log('Document signed:', { signature, timestamp })
+  const handleSigned = () => {
+    // Handle document signed logic here
   }
 
+  const toggleLightMode = () => {
+    setTheme(theme === "dark" ? "light" : "dark")
+  }
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div
+      className={clsx(
+        "min-h-screen bg-gradient-to-br transition-colors",
+        theme === "dark" ? "from-gray-900 via-gray-800 to-gray-900" : "from-blue-50 via-white to-indigo-50",
+      )}
+    >
       {/* Header */}
-      <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+      <header
+        className={clsx(
+          "backdrop-blur-sm border-b sticky top-0 z-50",
+          theme === "dark" ? "bg-gray-800/80 border-gray-700" : "bg-white/80 border-gray-200",
+        )}
+      >
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -59,15 +73,27 @@ export default function Home() {
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                <h1 className={clsx("text-xl font-bold", theme === "dark" ? "text-white" : "text-gray-900")}>
                   Document Registry
                 </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
+                <p className={clsx("text-sm", theme === "dark" ? "text-gray-300" : "text-gray-600")}>
                   Blockchain Document Verification
                 </p>
               </div>
             </div>
-            
+
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={toggleLightMode}
+                className={clsx(
+                  "px-3 py-2 rounded-lg hover:transition-colors rounded-full",
+                  theme === "dark" ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-200 hover:bg-gray-300 text-gray-700",
+                )}
+              >
+                {theme === "light" ? "dark" : "light"}
+              </button>
+            </div>
+
             {/* Wallet Connection */}
             <div className="flex items-center space-x-4">
               {isConnected ? (
@@ -75,20 +101,39 @@ export default function Home() {
                   <div className="relative wallet-selector-container">
                     <button
                       onClick={() => setShowWalletSelector(!showWalletSelector)}
-                      className="flex items-center space-x-2 bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                      className={clsx(
+                        "flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors",
+                        theme === "dark" ? "bg-green-900/30 hover:bg-green-900/50" : "bg-green-100 hover:bg-green-200",
+                      )}
                     >
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                      <span
+                        className={clsx("text-sm font-medium", theme === "dark" ? "text-green-200" : "text-green-800")}
+                      >
                         Wallet {currentWalletIndex}: {account?.slice(0, 6)}...{account?.slice(-4)}
                       </span>
-                      <svg className="w-4 h-4 text-green-800 dark:text-green-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className={clsx("w-4 h-4", theme === "dark" ? "text-green-200" : "text-green-800")}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
                     {showWalletSelector && (
-                      <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto">
-                        <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Select Anvil Wallet</h3>
+                      <div
+                        className={clsx(
+                          "absolute right-0 mt-2 w-80 rounded-lg shadow-xl border z-50 max-h-96 overflow-y-auto",
+                          theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200",
+                        )}
+                      >
+                        <div className={clsx("p-3 border-b", theme === "dark" ? "border-gray-700" : "border-gray-200")}>
+                          <h3
+                            className={clsx("text-sm font-semibold", theme === "dark" ? "text-white" : "text-gray-900")}
+                          >
+                            Select Anvil Wallet
+                          </h3>
                         </div>
                         <div className="p-2">
                           {availableWallets.map((wallet) => (
@@ -98,11 +143,16 @@ export default function Home() {
                                 switchWallet(wallet.index)
                                 setShowWalletSelector(false)
                               }}
-                              className={`w-full text-left px-3 py-2 rounded-md mb-1 transition-colors ${
+                              className={clsx(
+                                "w-full text-left px-3 py-2 rounded-md mb-1 transition-colors",
                                 currentWalletIndex === wallet.index
-                                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100'
-                                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                              }`}
+                                  ? theme === "dark"
+                                    ? "bg-blue-900/30 text-blue-100"
+                                    : "bg-blue-100 text-blue-900"
+                                  : theme === "dark"
+                                    ? "hover:bg-gray-700 text-gray-300"
+                                    : "hover:bg-gray-100 text-gray-700",
+                              )}
                             >
                               <div className="flex items-center justify-between">
                                 <div>
@@ -121,7 +171,10 @@ export default function Home() {
                   </div>
                   <button
                     onClick={disconnect}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    className={clsx(
+                      "px-4 py-2 text-sm font-medium transition-colors",
+                      theme === "dark" ? "text-gray-300 hover:text-red-400" : "text-gray-700 hover:text-red-600",
+                    )}
                   >
                     Disconnect
                   </button>
@@ -134,12 +187,21 @@ export default function Home() {
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                   >
                     <Wallet className="w-4 h-4" />
-                    <span>{isConnecting ? 'Connecting...' : 'Connect Wallet'}</span>
+                    <span>{isConnecting ? "Connecting..." : "Connect Wallet"}</span>
                   </button>
                   {showWalletSelector && !isConnected && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto">
-                      <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Select Anvil Wallet</h3>
+                    <div
+                      className={clsx(
+                        "absolute right-0 mt-2 w-80 rounded-lg shadow-xl border z-50 max-h-96 overflow-y-auto",
+                        theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200",
+                      )}
+                    >
+                      <div className={clsx("p-3 border-b", theme === "dark" ? "border-gray-700" : "border-gray-200")}>
+                        <h3
+                          className={clsx("text-sm font-semibold", theme === "dark" ? "text-white" : "text-gray-900")}
+                        >
+                          Select Anvil Wallet
+                        </h3>
                       </div>
                       <div className="p-2">
                         {availableWallets.map((wallet) => (
@@ -150,7 +212,10 @@ export default function Home() {
                               setShowWalletSelector(false)
                             }}
                             disabled={isConnecting}
-                            className="w-full text-left px-3 py-2 rounded-md mb-1 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50"
+                            className={clsx(
+                              "w-full text-left px-3 py-2 rounded-md mb-1 transition-colors disabled:opacity-50",
+                              theme === "dark" ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-100 text-gray-700",
+                            )}
                           >
                             <div className="text-xs font-medium">Wallet {wallet.index}</div>
                             <div className="text-xs font-mono">{wallet.address}</div>
@@ -169,32 +234,22 @@ export default function Home() {
       <div className="container mx-auto px-4 py-8">
         {/* Hero Section */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          <h2 className={clsx("text-4xl font-bold mb-4", theme === "dark" ? "text-white" : "text-gray-900")}>
             Secure Document Verification
           </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+          <p className={clsx("text-xl max-w-3xl mx-auto", theme === "dark" ? "text-gray-300" : "text-gray-600")}>
             Store, sign, and verify document hashes on the blockchain with complete transparency and security.
           </p>
         </div>
 
-        {/* Debug Info
-        {process.env.NODE_ENV === 'development' && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 mb-8 border border-yellow-200 dark:border-yellow-800">
-            <h3 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">Debug Info:</h3>
-            <div className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
-              <div>Connected: {isConnected ? 'Yes' : 'No'}</div>
-              <div>Account: {account || 'None'}</div>
-              <div>Connecting: {isConnecting ? 'Yes' : 'No'}</div>
-              <div>Error: {error || 'None'}</div>
-              <div>Document Hash: {documentHash || 'None'}</div>
-              <div>Contract Address: {process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 'Not configured'}</div>
-            </div>
-          </div>
-        )} */}
-
         {/* Navigation Tabs */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mb-8">
-          <div className="border-b border-gray-200 dark:border-gray-700">
+        <div
+          className={clsx(
+            "rounded-xl shadow-lg border mb-8",
+            theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200",
+          )}
+        >
+          <div className={clsx("border-b", theme === "dark" ? "border-gray-700" : "border-gray-200")}>
             <nav className="flex space-x-8 px-6">
               {tabs.map((tab) => {
                 const Icon = tab.icon
@@ -202,16 +257,23 @@ export default function Home() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center space-x-3 py-6 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
+                    className={clsx(
+                      "flex items-center space-x-3 py-6 px-1 border-b-2 font-medium text-sm transition-all duration-200",
                       activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                    }`}
+                        ? theme === "dark"
+                          ? "border-blue-500 text-blue-400"
+                          : "border-blue-500 text-blue-600"
+                        : theme === "dark"
+                          ? "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500"
+                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300",
+                    )}
                   >
                     <Icon className="w-5 h-5" />
                     <div className="text-left">
                       <div>{tab.label}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                      <div
+                        className={clsx("text-xs font-normal", theme === "dark" ? "text-gray-400" : "text-gray-500")}
+                      >
                         {tab.description}
                       </div>
                     </div>
@@ -223,40 +285,78 @@ export default function Home() {
         </div>
 
         {/* Main Content */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
+        <div
+          className={clsx(
+            "rounded-xl shadow-lg border p-8",
+            theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200",
+          )}
+        >
           {!isConnected ? (
             <div className="text-center py-16">
-              <div className="w-20 h-20 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                <AlertCircle className="w-10 h-10 text-yellow-600 dark:text-yellow-400" />
+              <div
+                className={clsx(
+                  "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6",
+                  theme === "dark" ? "bg-yellow-900/30" : "bg-yellow-100",
+                )}
+              >
+                <AlertCircle className={clsx("w-10 h-10", theme === "dark" ? "text-yellow-400" : "text-yellow-600")} />
               </div>
-              <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+              <h3 className={clsx("text-2xl font-semibold mb-4", theme === "dark" ? "text-white" : "text-gray-900")}>
                 Connect Your Wallet
               </h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-md mx-auto">
+              <p className={clsx("mb-8 max-w-md mx-auto", theme === "dark" ? "text-gray-300" : "text-gray-600")}>
                 Please select an Anvil wallet to access the dApp features and start verifying documents.
               </p>
               {error && (
-                <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 mb-4 border border-red-200 dark:border-red-800 max-w-md mx-auto">
-                  <p className="text-red-800 dark:text-red-200">{error}</p>
+                <div
+                  className={clsx(
+                    "rounded-lg p-4 mb-4 border max-w-md mx-auto",
+                    theme === "dark" ? "bg-red-900/20 border-red-800" : "bg-red-50 border-red-200",
+                  )}
+                >
+                  <p className={clsx(theme === "dark" ? "text-red-200" : "text-red-800")}>{error}</p>
                 </div>
               )}
               <div className="max-w-md mx-auto">
-                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Select Anvil Test Wallet</h4>
+                <div
+                  className={clsx(
+                    "rounded-lg p-6 border",
+                    theme === "dark" ? "bg-gray-900 border-gray-700" : "bg-gray-50 border-gray-200",
+                  )}
+                >
+                  <h4 className={clsx("text-sm font-semibold mb-4", theme === "dark" ? "text-white" : "text-gray-900")}>
+                    Select Anvil Test Wallet
+                  </h4>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {availableWallets.map((wallet) => (
                       <button
                         key={wallet.index}
                         onClick={() => connect(wallet.index)}
                         disabled={isConnecting}
-                        className="w-full text-left px-4 py-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all disabled:opacity-50"
+                        className={clsx(
+                          "w-full text-left px-4 py-3 rounded-lg border transition-all disabled:opacity-50",
+                          theme === "dark"
+                            ? "bg-gray-800 border-gray-700 hover:border-blue-500 hover:shadow-md"
+                            : "bg-white border-gray-200 hover:border-blue-500 hover:shadow-md",
+                        )}
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">Wallet {wallet.index}</div>
-                            <div className="text-xs font-mono text-gray-600 dark:text-gray-400">{wallet.address}</div>
+                            <div
+                              className={clsx("text-sm font-medium", theme === "dark" ? "text-white" : "text-gray-900")}
+                            >
+                              Wallet {wallet.index}
+                            </div>
+                            <div
+                              className={clsx(
+                                "text-xs font-mono",
+                                theme === "dark" ? "text-gray-400" : "text-gray-600",
+                              )}
+                            >
+                              {wallet.address}
+                            </div>
                           </div>
-                          <Wallet className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          <Wallet className="w-5 h-5 text-blue-600" />
                         </div>
                       </button>
                     ))}
@@ -266,13 +366,13 @@ export default function Home() {
             </div>
           ) : (
             <>
-              {activeTab === 'upload' && (
+              {activeTab === "upload" && (
                 <div className="space-y-8">
                   <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    <h2 className={clsx("text-2xl font-bold mb-2", theme === "dark" ? "text-white" : "text-gray-900")}>
                       Upload & Sign Document
                     </h2>
-                    <p className="text-gray-600 dark:text-gray-300">
+                    <p className={clsx(theme === "dark" ? "text-gray-300" : "text-gray-600")}>
                       Upload a file, generate its hash, and sign it with your wallet
                     </p>
                   </div>
@@ -281,13 +381,13 @@ export default function Home() {
                 </div>
               )}
 
-              {activeTab === 'verify' && (
+              {activeTab === "verify" && (
                 <div className="space-y-6">
                   <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    <h2 className={clsx("text-2xl font-bold mb-2", theme === "dark" ? "text-white" : "text-gray-900")}>
                       Verify Document
                     </h2>
-                    <p className="text-gray-600 dark:text-gray-300">
+                    <p className={clsx(theme === "dark" ? "text-gray-300" : "text-gray-600")}>
                       Verify a document's authenticity by providing the file and signer address
                     </p>
                   </div>
@@ -295,13 +395,13 @@ export default function Home() {
                 </div>
               )}
 
-              {activeTab === 'history' && (
+              {activeTab === "history" && (
                 <div className="space-y-6">
                   <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    <h2 className={clsx("text-2xl font-bold mb-2", theme === "dark" ? "text-white" : "text-gray-900")}>
                       Document History
                     </h2>
-                    <p className="text-gray-600 dark:text-gray-300">
+                    <p className={clsx(theme === "dark" ? "text-gray-300" : "text-gray-600")}>
                       View all documents stored in the registry
                     </p>
                   </div>
