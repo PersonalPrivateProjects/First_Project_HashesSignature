@@ -144,7 +144,8 @@ export function MetaMaskProvider({ children }: { children: ReactNode }) {
       const walletSigner = new ethers.Wallet(wallet.privateKey, jsonRpcProvider)
       
       console.log('📝 Calling signer.signMessage...')
-      message = message.split(":")[1].trim(); // Obtenemos solo la parte del mensaje después de "Sign this message to prove you own the wallet:"
+      // Obtenemos solo la parte del mensaje después de "Sign this message to prove you own the wallet:"
+      message = message.split(":")[1].trim(); 
       console.log(`Mensaje final a firmar: ${message}`)
 
       // Y lo que firma es el hash del mensaje en nuestro caso el hash de un archivo

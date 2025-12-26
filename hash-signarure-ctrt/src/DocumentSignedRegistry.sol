@@ -116,7 +116,7 @@ contract DocumentSignedRegistry{
      if(_signer == address(0) || _signature.length == 0){
        isValid = false;
      }else{
-        // Prefijo estándar Ethereum
+        // Prefijo estándar Ethereum: toEthSignedMessageHash es ideal para hashe binarios (hash proviene de archivos)
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(_hash);
         // Recuperar dirección del firmante a partir de la firma y el hash
         address recovered = ECDSA.recover(ethSignedMessageHash, _signature);
