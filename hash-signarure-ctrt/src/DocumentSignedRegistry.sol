@@ -65,8 +65,7 @@ contract DocumentSignedRegistry{
    function getDocumentInfo(bytes32 _hash)
     external
      view 
-     documentExists(_hash)
-      returns (Document memory document){      
+     documentExists(_hash) returns (Document memory document){      
       return documents[_hash];
    }
 
@@ -107,37 +106,11 @@ contract DocumentSignedRegistry{
    } 
  
 
-   /**
-     * @dev Verify a document signature (simplified)
-     * @param _hash The hash of the document
-     * @param _signer The address of the signer
-     * @param _signature The signature to verify
-     * @return isValid True if the signature is valid
-     */
-    function verifyDocument(
-        bytes32 _hash,
-        address _signer,
-        bytes memory _signature
-    ) external returns (bool isValid) {
-        // Verificacion simplificada: solo comprueba si el documento existe y si el firmante coincide pero no valida la firma criptograficamente
-        Document memory doc = documents[_hash];
-        
-        if (doc.signer == address(0)) {
-            isValid = false;
-        } else {
-            // Check if the signer matches and signature is not empty
-            isValid = (doc.signer == _signer && doc.signature.length > 0 && _signature.length > 0);
-        }
-        
-        emit DocumentVerified(_hash, _signer, isValid);
-        return isValid;
-    }
-
   // Funcion de verificacion mas segura que valida criptograficamente la firma
-  function verifyDocumentV2(
+  function verifyDocument(
     bytes32 _hash, 
     address _signer, 
-    bytes calldata _signature
+    bytes memory _signature
     ) external
      returns (bool isValid) {
      if(_signer == address(0) || _signature.length == 0){
@@ -186,7 +159,7 @@ contract DocumentSignedRegistry{
    require(documentHashes.length > 0, "Not documentos in storage");    
     // Use internal helper to clean array
     _removeHashFromArray(_hash);
-    delete documents[_hash];
+    documents[_hash].signer = address(0);
     emit DocumentRemoved(_hash, documents[_hash].signer);
  }
 

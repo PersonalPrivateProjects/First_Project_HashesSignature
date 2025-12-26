@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -22,24 +23,33 @@ export default function Home() {
     currentWalletIndex,
     availableWallets,
   } = useMetaMask()
-  const [activeTab, setActiveTab] = useState<"upload" | "verify" | "history">("upload")
+
+  // ❌ Antes: activeTab para tabs
+  // ✅ Ahora: activeSection para resaltar el nav según el scroll
+  const [activeSection, setActiveSection] = useState<"uploader" | "signer" | "verifier" | "history">("uploader")
   const [documentHash, setDocumentHash] = useState<string>("")
   const [showWalletSelector, setShowWalletSelector] = useState(false)
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  
+  // Enviar señal para auto-carga de historial
+  const [historyAutoLoad, setHistoryAutoLoad] = useState(false);
 
-  const tabs = [
-    { id: "upload", label: "Upload", description: "Upload a document", icon: FileText },
-    { id: "verify", label: "Verify", description: "Verify a document", icon: Shield },
+
+  // Definición de secciones (reutiliza iconos y descripciones)
+  const sections = [
+    { id: "uploader", label: "Upload", description: "Upload a document", icon: FileText },
+    { id: "signer", label: "Sign", description: "Sign document hash", icon: Shield },
+    { id: "verifier", label: "Verify", description: "Verify a document", icon: CheckCircle },
     { id: "history", label: "History", description: "View document history", icon: History },
-  ]
+  ] as const
 
   const handleFileHash = (hash: string) => {
     setDocumentHash(hash)
   }
 
   const handleSigned = () => {
-    // Handle document signed logic here
+    // Hook para lógica post-firma si lo necesitas
   }
 
   const toggleLightMode = () => {
@@ -49,6 +59,44 @@ export default function Home() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Smooth scroll helper
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id)
+    if (el) {       
+       if (id === "history") {
+         setHistoryAutoLoad(true); 
+       }else{
+          setHistoryAutoLoad(false);
+       }
+       el.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+     
+  }
+
+  // IntersectionObserver para resaltar sección activa en el nav
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+        if (visible?.target?.id) {
+          const id = visible.target.id as typeof activeSection
+          setActiveSection(id)
+        }
+      },
+      { root: null, rootMargin: "0px 0px -60% 0px", threshold: 0.2 } // activa cuando ~20% de la sección está visible
+    )
+
+    sections.forEach((s) => {
+      const el = document.getElementById(s.id)
+      if (el) observer.observe(el)
+    })
+
+    return () => observer.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted])
 
   if (!mounted) return null
 
@@ -129,9 +177,7 @@ export default function Home() {
                         )}
                       >
                         <div className={clsx("p-3 border-b", theme === "dark" ? "border-gray-700" : "border-gray-200")}>
-                          <h3
-                            className={clsx("text-sm font-semibold", theme === "dark" ? "text-white" : "text-gray-900")}
-                          >
+                          <h3 className={clsx("text-sm font-semibold", theme === "dark" ? "text-white" : "text-gray-900")}>
                             Select Anvil Wallet
                           </h3>
                         </div>
@@ -197,9 +243,7 @@ export default function Home() {
                       )}
                     >
                       <div className={clsx("p-3 border-b", theme === "dark" ? "border-gray-700" : "border-gray-200")}>
-                        <h3
-                          className={clsx("text-sm font-semibold", theme === "dark" ? "text-white" : "text-gray-900")}
-                        >
+                        <h3 className={clsx("text-sm font-semibold", theme === "dark" ? "text-white" : "text-gray-900")}>
                           Select Anvil Wallet
                         </h3>
                       </div>
@@ -229,10 +273,49 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Navigation Bar (anchors) — reemplazo de Tabs */}
+        <div
+          className={clsx(
+            "border-t",
+            theme === "dark" ? "border-gray-700" : "border-gray-200",
+          )}
+        >
+          <nav className="container mx-auto px-4 flex gap-6 overflow-x-auto py-3">
+            {sections.map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeSection === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => scrollToSection(tab.id)}
+                  className={clsx(
+                    "flex items-center gap-3 py-3 px-2 border-b-2 font-medium text-sm transition-all duration-200",
+                    isActive
+                      ? theme === "dark"
+                        ? "border-blue-500 text-blue-400"
+                        : "border-blue-500 text-blue-600"
+                      : theme === "dark"
+                        ? "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300",
+                  )}
+                >
+                  <Icon className="w-5 h-5" />
+                  <div className="text-left">
+                    <div>{tab.label}</div>
+                    <div className={clsx("text-xs font-normal", theme === "dark" ? "text-gray-400" : "text-gray-500")}>
+                      {tab.description}
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </nav>
+        </div>
       </header>
 
+      {/* Hero */}
       <div className="container mx-auto px-4 py-8">
-        {/* Hero Section */}
         <div className="text-center mb-12">
           <h2 className={clsx("text-4xl font-bold mb-4", theme === "dark" ? "text-white" : "text-gray-900")}>
             Secure Document Verification
@@ -242,52 +325,10 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Navigation Tabs */}
-        <div
-          className={clsx(
-            "rounded-xl shadow-lg border mb-8",
-            theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200",
-          )}
-        >
-          <div className={clsx("border-b", theme === "dark" ? "border-gray-700" : "border-gray-200")}>
-            <nav className="flex space-x-8 px-6">
-              {tabs.map((tab) => {
-                const Icon = tab.icon
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={clsx(
-                      "flex items-center space-x-3 py-6 px-1 border-b-2 font-medium text-sm transition-all duration-200",
-                      activeTab === tab.id
-                        ? theme === "dark"
-                          ? "border-blue-500 text-blue-400"
-                          : "border-blue-500 text-blue-600"
-                        : theme === "dark"
-                          ? "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500"
-                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300",
-                    )}
-                  >
-                    <Icon className="w-5 h-5" />
-                    <div className="text-left">
-                      <div>{tab.label}</div>
-                      <div
-                        className={clsx("text-xs font-normal", theme === "dark" ? "text-gray-400" : "text-gray-500")}
-                      >
-                        {tab.description}
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </nav>
-          </div>
-        </div>
-
         {/* Main Content */}
         <div
           className={clsx(
-            "rounded-xl shadow-lg border p-8",
+            "rounded-xl shadow-lg border p-8 space-y-12",
             theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200",
           )}
         >
@@ -342,17 +383,10 @@ export default function Home() {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <div
-                              className={clsx("text-sm font-medium", theme === "dark" ? "text-white" : "text-gray-900")}
-                            >
+                            <div className={clsx("text-sm font-medium", theme === "dark" ? "text-white" : "text-gray-900")}>
                               Wallet {wallet.index}
                             </div>
-                            <div
-                              className={clsx(
-                                "text-xs font-mono",
-                                theme === "dark" ? "text-gray-400" : "text-gray-600",
-                              )}
-                            >
+                            <div className={clsx("text-xs font-mono", theme === "dark" ? "text-gray-400" : "text-gray-600")}>
                               {wallet.address}
                             </div>
                           </div>
@@ -366,48 +400,57 @@ export default function Home() {
             </div>
           ) : (
             <>
-              {activeTab === "upload" && (
-                <div className="space-y-8">
-                  <div className="text-center">
-                    <h2 className={clsx("text-2xl font-bold mb-2", theme === "dark" ? "text-white" : "text-gray-900")}>
-                      Upload & Sign Document
-                    </h2>
-                    <p className={clsx(theme === "dark" ? "text-gray-300" : "text-gray-600")}>
-                      Upload a file, generate its hash, and sign it with your wallet
-                    </p>
-                  </div>
-                  <FileUploader onFileHash={handleFileHash} />
-                  <DocumentSigner documentHash={documentHash} onSigned={handleSigned} />
+              {/* Sección: Upload */}
+              <section id="uploader" className="space-y-6">
+                <div className="text-center">
+                  <h2 className={clsx("text-2xl font-bold mb-2", theme === "dark" ? "text-white" : "text-gray-900")}>
+                    Upload File
+                  </h2>
+                  <p className={clsx(theme === "dark" ? "text-gray-300" : "text-gray-600")}>
+                    Upload a file to generate its hash
+                  </p>
                 </div>
-              )}
+                <FileUploader onFileHash={handleFileHash} />
+              </section>
 
-              {activeTab === "verify" && (
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <h2 className={clsx("text-2xl font-bold mb-2", theme === "dark" ? "text-white" : "text-gray-900")}>
-                      Verify Document
-                    </h2>
-                    <p className={clsx(theme === "dark" ? "text-gray-300" : "text-gray-600")}>
-                      Verify a document's authenticity by providing the file and signer address
-                    </p>
-                  </div>
-                  <DocumentVerifier />
+              {/* Sección: Sign */}
+              <section id="signer" className="space-y-6">
+                <div className="text-center">
+                  <h2 className={clsx("text-2xl font-bold mb-2", theme === "dark" ? "text-white" : "text-gray-900")}>
+                    Sign Document
+                  </h2>
+                  <p className={clsx(theme === "dark" ? "text-gray-300" : "text-gray-600")}>
+                    Sign the generated hash with your wallet
+                  </p>
                 </div>
-              )}
+                <DocumentSigner documentHash={documentHash} onSigned={handleSigned} />
+              </section>
 
-              {activeTab === "history" && (
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <h2 className={clsx("text-2xl font-bold mb-2", theme === "dark" ? "text-white" : "text-gray-900")}>
-                      Document History
-                    </h2>
-                    <p className={clsx(theme === "dark" ? "text-gray-300" : "text-gray-600")}>
-                      View all documents stored in the registry
-                    </p>
-                  </div>
-                  <DocumentHistory />
+              {/* Sección: Verify */}
+              <section id="verifier" className="space-y-6">
+                <div className="text-center">
+                  <h2 className={clsx("text-2xl font-bold mb-2", theme === "dark" ? "text-white" : "text-gray-900")}>
+                    Verify Document
+                  </h2>
+                  <p className={clsx(theme === "dark" ? "text-gray-300" : "text-gray-600")}>
+                    Verify a document's authenticity by providing the file and signer address
+                  </p>
                 </div>
-              )}
+                <DocumentVerifier />
+              </section>
+
+              {/* Sección: History */}
+              <section id="history" className="space-y-6">
+                <div className="text-center">
+                  <h2 className={clsx("text-2xl font-bold mb-2", theme === "dark" ? "text-white" : "text-gray-900")}>
+                    Document History
+                  </h2>
+                  <p className={clsx(theme === "dark" ? "text-gray-300" : "text-gray-600")}>
+                    View all documents stored in the registry
+                  </p>
+                </div>
+                <DocumentHistory autoLoad={historyAutoLoad} />
+              </section>
             </>
           )}
         </div>

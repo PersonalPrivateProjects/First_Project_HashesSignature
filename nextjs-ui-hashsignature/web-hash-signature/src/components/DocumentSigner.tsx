@@ -1,9 +1,12 @@
+
 "use client"
 
-import { useState } from "react"
-import { PenTool, CheckCircle, AlertCircle, Loader2, Shield, ExternalLink, Upload } from "lucide-react"
+import { useState, useEffect } from "react"
+import { PenTool, CheckCircle, AlertCircle, Loader2, Shield, ExternalLink, Upload, ClipboardCopy } from "lucide-react"
 import { useMetaMask } from "../hooks/useMetaMask"
 import { useContract } from "../hooks/useContract"
+import { useTheme } from "next-themes"
+import clsx from "clsx"
 
 interface DocumentSignerProps {
   documentHash?: string
@@ -20,22 +23,27 @@ export function DocumentSigner({ documentHash, onSigned }: DocumentSignerProps) 
   const [timestamp, setTimestamp] = useState<number>(0)
   const [txHash, setTxHash] = useState<string>("")
 
-  console.log("DocumentSigner - isConnected:", isConnected, "account:", account)
+  const { theme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  const [copiedSigner, setCopiedSigner] = useState(false); // Estado para controlar el copiado
 
-  const getCurrentTimestamp = () => {
-    return Math.floor(Date.now() / 1000)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    // Evita flash incorrecto de tema en SSR
+    return null
   }
 
-  const handleSign = async () => {
-    console.log("handleSign called - documentHash:", documentHash, "isConnected:", isConnected, "account:", account)
+  const getCurrentTimestamp = () => Math.floor(Date.now() / 1000)
 
+  const handleSign = async () => {
     if (!documentHash) {
       alert("Please upload a file first")
       return
     }
-
     if (!isConnected || !account) {
-      console.error("Not connected or no account:", { isConnected, account })
       alert("Please connect your wallet")
       return
     }
@@ -48,11 +56,7 @@ export function DocumentSigner({ documentHash, onSigned }: DocumentSignerProps) 
         `Signer: ${account}\n\n` +
         `Do you want to proceed?`,
     )
-
-    if (!confirmed) {
-      console.log("User cancelled signing")
-      return
-    }
+    if (!confirmed) return
 
     setIsSigning(true)
     setSignature("")
@@ -60,20 +64,13 @@ export function DocumentSigner({ documentHash, onSigned }: DocumentSignerProps) 
     setTxHash("")
 
     try {
-      console.log("About to sign message...")
       const sig = await signMessage(message)
-      console.log("Signature received:", sig)
       const ts = getCurrentTimestamp()
-
       setSignature(sig)
       setTimestamp(ts)
       onSigned?.(sig, ts)
-
-      alert(
-        `✅ Document signed successfully!\n\nSignature: ${sig.substring(0, 20)}...${sig.substring(sig.length - 20)}`,
-      )
+      alert(`✅ Document signed successfully!\n\nSignature: ${sig.substring(0, 20)}...${sig.substring(sig.length - 20)}`)
     } catch (err: any) {
-      console.error("Error signing:", err)
       alert(`❌ Error signing: ${err.message}`)
     } finally {
       setIsSigning(false)
@@ -85,9 +82,7 @@ export function DocumentSigner({ documentHash, onSigned }: DocumentSignerProps) 
       alert("Please sign the document first")
       return
     }
-
     if (!isConnected || !account) {
-      console.error("Not connected or no account:", { isConnected, account })
       alert("Please connect your wallet")
       return
     }
@@ -102,26 +97,15 @@ export function DocumentSigner({ documentHash, onSigned }: DocumentSignerProps) 
         `This action will require gas fees.\n\n` +
         `Do you want to proceed?`,
     )
-
-    if (!confirmed) {
-      console.log("User cancelled blockchain storage")
-      return
-    }
+    if (!confirmed) return
 
     setIsStoring(true)
     setTxHash("")
-
     try {
-      console.log("Storing document hash on blockchain...")
       const tx = await storeDocumentHash(documentHash, timestamp, signature, account)
-      console.log("Transaction hash:", tx)
       setTxHash(tx || "")
-
-      if (tx) {
-        alert(`✅ Document stored successfully on blockchain!\n\nTransaction Hash: ${tx}`)
-      }
+      if (tx) alert(`✅ Document stored successfully on blockchain!\n\nTransaction Hash: ${tx}`)
     } catch (err: any) {
-      console.error("Error storing:", err)
       alert(`❌ Error storing on blockchain: ${err.message}`)
     } finally {
       setIsStoring(false)
@@ -129,36 +113,108 @@ export function DocumentSigner({ documentHash, onSigned }: DocumentSignerProps) 
   }
 
   const reset = () => {
-    setSignature("")
-    setTimestamp(0)
-    setTxHash("")
+    setSignature("");
+    setTimestamp(0);
+    setTxHash("");
+    setCopiedSigner(false);
   }
+
+  
+// ⬇️ NUEVO: copiar signer al portapapeles con fallback
+  const handleCopySigner = async () => {
+    if (!account) return
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(account)
+      } else {
+        // Fallback: crea un input temporal
+        const input = document.createElement("input")
+        input.value = account
+        document.body.appendChild(input)
+        input.select()
+        document.execCommand("copy")
+        document.body.removeChild(input)
+      }
+      setCopiedSigner(true)
+      setTimeout(() => setCopiedSigner(false), 1500)
+    } catch (e) {
+      alert("Could not copy signer to clipboard")
+    }
+  }
+
 
   return (
     <div className="relative group">
-      {/* Efecto de fondo con gradiente animado */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600 rounded-2xl opacity-20 group-hover:opacity-30 blur-xl transition-all duration-500"></div>
+      {/* Fondo con gradiente: ajustado por tema */}
+      <div
+        className={clsx(
+          "rounded-xl shadow-lg border p-8 group-hover:opacity-30 blur-xl transition-all duration-500",
+          theme === "dark"
+            ? "bg-gray-800 border-gray-700"
+            : "bg-white border-gray-200",
+        )}
+      />
 
-      <div className="relative bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden">
-        {/* Header minimalista */}
-        <div className="relative border-b border-slate-800 bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 px-8 py-6">
+      <div
+        className={clsx(
+          "relative rounded-2xl overflow-hidden border",
+          theme === "dark"
+            ? "bg-slate-950 border-slate-800"
+            : "bg-white border-gray-200",
+        )}
+      >
+        {/* Header */}
+        <div
+          className={clsx(
+            "relative border-b px-8 py-6",
+            theme === "dark"
+              ? "border-slate-800 bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900"
+              : "border-gray-200 bg-gradient-to-r from-gray-50 via-white to-gray-50",
+          )}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <div className="absolute inset-0 bg-violet-500 rounded-lg blur-md opacity-50"></div>
-                <div className="relative p-3 bg-slate-900 border border-violet-500/30 rounded-lg">
-                  <PenTool className="w-6 h-6 text-violet-400" />
+                <div
+                  className={clsx(
+                    "absolute inset-0 rounded-lg blur-md opacity-50",
+                    theme === "dark" ? "bg-violet-500" : "bg-indigo-400",
+                  )}
+                />
+                <div
+                  className={clsx(
+                    "relative p-3 border rounded-lg",
+                    theme === "dark"
+                      ? "bg-slate-900 border-violet-500/30"
+                      : "bg-white border-indigo-300",
+                  )}
+                >
+                  <PenTool className={clsx("w-6 h-6", theme === "dark" ? "text-violet-400" : "text-indigo-600")} />
                 </div>
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white tracking-tight">SIGN</h2>
-                <p className="text-xs text-slate-400 font-mono mt-0.5">Digital Signature</p>
+                <h2 className={clsx("text-xl font-bold tracking-tight", theme === "dark" ? "text-white" : "text-gray-900")}>
+                  SIGN
+                </h2>
+                <p className={clsx("text-xs font-mono mt-0.5", theme === "dark" ? "text-slate-400" : "text-gray-500")}>
+                  Digital Signature
+                </p>
               </div>
             </div>
+
             {isConnected && account && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-emerald-500/30 rounded-full">
-                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></div>
-                <span className="text-xs font-mono text-emerald-400">CONNECTED</span>
+              <div
+                className={clsx(
+                  "flex items-center gap-2 px-3 py-1.5 border rounded-full",
+                  theme === "dark"
+                    ? "bg-slate-900 border-emerald-500/30"
+                    : "bg-emerald-50 border-emerald-200",
+                )}
+              >
+                <div className={clsx("w-1.5 h-1.5 rounded-full", theme === "dark" ? "bg-emerald-400" : "bg-emerald-500")} />
+                <span className={clsx("text-xs font-mono", theme === "dark" ? "text-emerald-400" : "text-emerald-700")}>
+                  CONNECTED
+                </span>
               </div>
             )}
           </div>
@@ -168,42 +224,104 @@ export function DocumentSigner({ documentHash, onSigned }: DocumentSignerProps) 
           {!isConnected ? (
             <div className="text-center py-16">
               <div className="relative inline-block mb-6">
-                <div className="absolute inset-0 bg-amber-500 rounded-full blur-2xl opacity-20"></div>
-                <div className="relative p-6 bg-slate-900 border border-amber-500/30 rounded-full">
-                  <AlertCircle className="w-12 h-12 text-amber-400" />
+                <div
+                  className={clsx(
+                    "absolute inset-0 rounded-full blur-2xl opacity-20",
+                    theme === "dark" ? "bg-amber-500" : "bg-yellow-400",
+                  )}
+                />
+                <div
+                  className={clsx(
+                    "relative p-6 border rounded-full",
+                    theme === "dark"
+                      ? "bg-slate-900 border-amber-500/30"
+                      : "bg-white border-yellow-300",
+                  )}
+                >
+                  <AlertCircle className={clsx("w-12 h-12", theme === "dark" ? "text-amber-400" : "text-yellow-600")} />
                 </div>
               </div>
-              <h3 className="text-lg font-mono font-bold text-white mb-2">WALLET NOT CONNECTED</h3>
-              <p className="text-sm text-slate-400 max-w-md mx-auto">Connect your wallet to sign documents</p>
+              <h3 className={clsx("text-lg font-mono font-bold mb-2", theme === "dark" ? "text-white" : "text-gray-900")}>
+                WALLET NOT CONNECTED
+              </h3>
+              <p className={clsx("text-sm max-w-md mx-auto", theme === "dark" ? "text-slate-400" : "text-gray-600")}>
+                Connect your wallet to sign documents
+              </p>
             </div>
           ) : !documentHash ? (
             <div className="text-center py-16">
               <div className="relative inline-block mb-6">
-                <div className="absolute inset-0 bg-blue-500 rounded-full blur-2xl opacity-20"></div>
-                <div className="relative p-6 bg-slate-900 border border-blue-500/30 rounded-full">
-                  <Upload className="w-12 h-12 text-blue-400" />
+                <div
+                  className={clsx(
+                    "absolute inset-0 rounded-full blur-2xl opacity-20",
+                    theme === "dark" ? "bg-blue-500" : "bg-indigo-400",
+                  )}
+                />
+                <div
+                  className={clsx(
+                    "relative p-6 border rounded-full",
+                    theme === "dark"
+                      ? "bg-slate-900 border-blue-500/30"
+                      : "bg-white border-indigo-300",
+                  )}
+                >
+                  <Upload className={clsx("w-12 h-12", theme === "dark" ? "text-blue-400" : "text-indigo-600")} />
                 </div>
               </div>
-              <h3 className="text-lg font-mono font-bold text-white mb-2">NO DOCUMENT</h3>
-              <p className="text-sm text-slate-400 max-w-md mx-auto">Upload a file to generate hash</p>
+              <h3 className={clsx("text-lg font-mono font-bold mb-2", theme === "dark" ? "text-white" : "text-gray-900")}>
+                NO DOCUMENT
+              </h3>
+              <p className={clsx("text-sm max-w-md mx-auto", theme === "dark" ? "text-slate-400" : "text-gray-600")}>
+                Upload a file to generate hash
+              </p>
             </div>
           ) : (
             <div className="space-y-6">
               {/* Hash del documento */}
-              <div className="relative overflow-hidden rounded-lg bg-slate-900 border border-slate-700 p-5">
+              <div
+                className={clsx(
+                  "relative overflow-hidden rounded-lg border p-5",
+                  theme === "dark" ? "bg-slate-900 border-slate-700" : "bg-gray-50 border-gray-200",
+                )}
+              >
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="p-1.5 bg-violet-500/10 border border-violet-500/30 rounded">
-                    <Shield className="w-3.5 h-3.5 text-violet-400" />
+                  <div
+                    className={clsx(
+                      "p-1.5 border rounded",
+                      theme === "dark"
+                        ? "bg-violet-500/10 border-violet-500/30"
+                        : "bg-indigo-100 border-indigo-200",
+                    )}
+                  >
+                    <Shield className={clsx("w-3.5 h-3.5", theme === "dark" ? "text-violet-400" : "text-indigo-600")} />
                   </div>
-                  <span className="text-xs font-mono uppercase tracking-wider text-slate-500">Document Hash</span>
+                  <span className={clsx("text-xs font-mono uppercase tracking-wider", theme === "dark" ? "text-slate-500" : "text-gray-500")}>
+                    Document Hash
+                  </span>
                 </div>
-                <code className="block text-sm font-mono text-slate-300 break-all leading-relaxed">{documentHash}</code>
+                <code className={clsx("block text-sm font-mono break-all leading-relaxed", theme === "dark" ? "text-slate-300" : "text-gray-800")}>
+                  {documentHash}
+                </code>
               </div>
 
               {!signature && (
                 <button onClick={handleSign} disabled={isSigning} className="w-full relative group/btn overflow-hidden">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 to-purple-600 rounded-lg opacity-70 group-hover/btn:opacity-100 blur transition-all duration-300"></div>
-                  <div className="relative flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-violet-500 to-purple-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                  <div
+                    className={clsx(
+                      "absolute -inset-1 rounded-lg opacity-70 blur transition-all duration-300 group-hover/btn:opacity-100",
+                      theme === "dark"
+                        ? "bg-gradient-to-r from-violet-600 to-purple-600"
+                        : "bg-gradient-to-r from-indigo-500 to-purple-500",
+                    )}
+                  />
+                  <div
+                    className={clsx(
+                      "relative flex items-center justify-center gap-3 px-6 py-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed",
+                      theme === "dark"
+                        ? "bg-gradient-to-r from-violet-500 to-purple-500"
+                        : "bg-gradient-to-r from-indigo-500 to-purple-500",
+                    )}
+                  >
                     {isSigning ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin text-white" />
@@ -226,55 +344,135 @@ export function DocumentSigner({ documentHash, onSigned }: DocumentSignerProps) 
               {signature && (
                 <div className="space-y-4">
                   {/* Resultado de firma */}
-                  <div className="relative overflow-hidden rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-6">
+                  <div
+                    className={clsx(
+                      "relative overflow-hidden rounded-lg border p-6",
+                      theme === "dark"
+                        ? "border-emerald-500/30 bg-emerald-500/5"
+                        : "border-emerald-200 bg-emerald-50",
+                    )}
+                  >
                     <div className="flex items-center gap-3 mb-5">
-                      <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-                        <CheckCircle className="w-5 h-5 text-emerald-400" />
+                      <div
+                        className={clsx(
+                          "p-3 border rounded-lg",
+                          theme === "dark"
+                            ? "bg-emerald-500/10 border-emerald-500/30"
+                            : "bg-emerald-100 border-emerald-200",
+                        )}
+                      >
+                        <CheckCircle className={clsx("w-5 h-5", theme === "dark" ? "text-emerald-400" : "text-emerald-700")} />
                       </div>
                       <div>
-                        <h3 className="font-mono font-bold text-emerald-400">SIGNED</h3>
-                        <p className="text-xs text-slate-400">Document signed successfully</p>
+                        <h3 className={clsx("font-mono font-bold", theme === "dark" ? "text-emerald-400" : "text-emerald-700")}>
+                          SIGNED
+                        </h3>
+                        <p className={clsx("text-xs", theme === "dark" ? "text-slate-400" : "text-gray-600")}>
+                          Document signed successfully
+                        </p>
                       </div>
                     </div>
 
                     <div className="space-y-3">
-                      <div className="bg-slate-900/50 backdrop-blur-sm rounded-lg p-3 border border-slate-700">
-                        <span className="text-xs font-mono uppercase tracking-wider text-slate-500 block mb-2">
+                      <div
+                        className={clsx(
+                          "backdrop-blur-sm rounded-lg p-3 border",
+                          theme === "dark" ? "bg-slate-900/50 border-slate-700" : "bg-gray-50 border-gray-200",
+                        )}
+                      >
+                        <span className={clsx("text-xs font-mono uppercase tracking-wider block mb-2", theme === "dark" ? "text-slate-500" : "text-gray-500")}>
                           Signature
                         </span>
-                        <code className="block text-xs font-mono text-slate-300 break-all leading-relaxed">
+                        <code className={clsx("block text-xs font-mono break-all leading-relaxed", theme === "dark" ? "text-slate-300" : "text-gray-800")}>
                           {signature}
                         </code>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="bg-slate-900/50 backdrop-blur-sm rounded-lg p-3 border border-slate-700">
-                          <span className="text-xs font-mono uppercase tracking-wider text-slate-500 block mb-2">
+                        <div
+                          className={clsx(
+                            "backdrop-blur-sm rounded-lg p-3 border",
+                            theme === "dark" ? "bg-slate-900/50 border-slate-700" : "bg-gray-50 border-gray-200",
+                          )}
+                        >
+                          <span className={clsx("text-xs font-mono uppercase tracking-wider block mb-2", theme === "dark" ? "text-slate-500" : "text-gray-500")}>
                             Timestamp
                           </span>
-                          <span className="text-sm font-mono text-slate-300">
+                          <span className={clsx("text-sm font-mono", theme === "dark" ? "text-slate-300" : "text-gray-800")}>
                             {new Date(timestamp * 1000).toLocaleString()}
                           </span>
                         </div>
 
-                        <div className="bg-slate-900/50 backdrop-blur-sm rounded-lg p-3 border border-slate-700">
-                          <span className="text-xs font-mono uppercase tracking-wider text-slate-500 block mb-2">
+                        <div
+                          className={clsx(
+                            "backdrop-blur-sm rounded-lg p-3 border",
+                            theme === "dark" ? "bg-slate-900/50 border-slate-700" : "bg-gray-50 border-gray-200",
+                          )}
+                        >
+                       <div className="flex items-center justify-between mb-2">
+                          <span className={clsx("text-xs font-mono uppercase tracking-wider block mb-2", theme === "dark" ? "text-slate-500" : "text-gray-500")}>
                             Signer
                           </span>
-                          <code className="text-xs font-mono text-slate-300 break-all">{account}</code>
+
+
+                          <ClipboardCopy
+                            onClick={handleCopySigner}                            
+                            role="button"
+                            aria-label={copiedSigner ? "Copied!" : "Copy signer"}
+                            tabIndex={0}
+                            className={clsx(
+                              "w-5 h-5 cursor-pointer rounded border p-1 transition-colors",
+                              theme === "dark"
+                                ? (copiedSigner ? "text-emerald-400 border-slate-700 bg-slate-800" : "text-slate-300 border-slate-700 hover:bg-slate-800")
+                                : (copiedSigner ? "text-emerald-700 border-gray-300 bg-gray-200" : "text-gray-700 border-gray-300 hover:bg-gray-200"),
+                            )}                            
+                          />
+                        </div>
+ 
+
+                          <code className={clsx("text-xs font-mono break-all", theme === "dark" ? "text-slate-300" : "text-gray-800")}>
+                            {account}
+                          </code>
+                          
+                            
+                            {/* <button
+                              onClick={handleCopySigner}
+                              title={copiedSigner ? "Copied!" : "Copy signer"}
+                              className={clsx(
+                                "p-2 rounded border transition-colors flex-shrink-0 ml-10",
+                                theme === "dark"
+                                  ? "bg-slate-900/50 border-slate-700 hover:bg-slate-800"
+                                  : "bg-gray-100 border-gray-300 hover:bg-gray-200",
+                              )}
+                            >
+                              <ClipboardCopy
+                                className={clsx("w-4 h-4", theme === "dark" ? (copiedSigner ? "text-emerald-400" : "text-slate-300") : (copiedSigner ? "text-emerald-600" : "text-gray-700"))}
+                              />
+                            </button> */}
+
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {!txHash && (
-                    <button
-                      onClick={handleStore}
-                      disabled={isStoring}
-                      className="w-full relative group/btn overflow-hidden"
-                    >
-                      <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg opacity-70 group-hover/btn:opacity-100 blur transition-all duration-300"></div>
-                      <div className="relative flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button onClick={handleStore} disabled={isStoring} className="w-full relative group/btn overflow-hidden">
+                      <div
+                        className={clsx(
+                          "absolute -inset-1 rounded-lg opacity-70 blur transition-all duration-300 group-hover/btn:opacity-100",
+                          theme === "dark"
+                            ? "bg-gradient-to-r from-purple-600 to-pink-600"
+                            : "bg-gradient-to-r from-fuchsia-500 to-pink-500",
+                        )}
+                      />
+                      <div
+                        className={clsx(
+                          "relative flex items-center justify-center gap-3 px-6 py-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed",
+                          theme === "dark"
+                            ? "bg-gradient-to-r from-purple-500 to-pink-500"
+                            : "bg-gradient-to-r from-fuchsia-500 to-pink-500",
+                        )}
+                      >
                         {isStoring ? (
                           <>
                             <Loader2 className="w-5 h-5 animate-spin text-white" />
@@ -295,22 +493,46 @@ export function DocumentSigner({ documentHash, onSigned }: DocumentSignerProps) 
                   )}
 
                   {txHash && (
-                    <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-5">
+                    <div
+                      className={clsx(
+                        "rounded-lg border p-5",
+                        theme === "dark" ? "border-blue-500/30 bg-blue-500/5" : "border-blue-200 bg-blue-50",
+                      )}
+                    >
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                          <CheckCircle className="w-4 h-4 text-blue-400" />
+                        <div
+                          className={clsx(
+                            "p-2 border rounded-lg",
+                            theme === "dark" ? "bg-blue-500/10 border-blue-500/30" : "bg-blue-100 border-blue-200",
+                          )}
+                        >
+                          <CheckCircle className={clsx("w-4 h-4", theme === "dark" ? "text-blue-400" : "text-blue-700")} />
                         </div>
-                        <span className="font-mono font-bold text-blue-400">ON-CHAIN</span>
+                        <span className={clsx("font-mono font-bold", theme === "dark" ? "text-blue-400" : "text-blue-700")}>
+                          ON-CHAIN
+                        </span>
                       </div>
-                      <div className="flex items-center gap-2 bg-slate-900/50 backdrop-blur-sm rounded-lg p-3 border border-slate-700">
-                        <code className="text-xs font-mono text-slate-300 break-all flex-1">{txHash}</code>
+                      <div
+                        className={clsx(
+                          "flex items-center gap-2 rounded-lg p-3 border",
+                          theme === "dark" ? "bg-slate-900/50 border-slate-700" : "bg-gray-50 border-gray-200",
+                        )}
+                      >
+                        <code className={clsx("text-xs font-mono break-all flex-1", theme === "dark" ? "text-slate-300" : "text-gray-800")}>
+                          {txHash}
+                        </code>
                         <a
                           href={`https://sepolia.etherscan.io/tx/${txHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-2 bg-blue-500/10 border border-blue-500/30 rounded hover:bg-blue-500/20 transition-colors flex-shrink-0"
+                          className={clsx(
+                            "p-2 rounded transition-colors flex-shrink-0 border",
+                            theme === "dark"
+                              ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20"
+                              : "bg-blue-100 border-blue-200 hover:bg-blue-200",
+                          )}
                         >
-                          <ExternalLink className="w-4 h-4 text-blue-400" />
+                          <ExternalLink className={clsx("w-4 h-4", theme === "dark" ? "text-blue-400" : "text-blue-700")} />
                         </a>
                       </div>
                     </div>
@@ -318,7 +540,12 @@ export function DocumentSigner({ documentHash, onSigned }: DocumentSignerProps) 
 
                   <button
                     onClick={reset}
-                    className="w-full px-4 py-3 border border-slate-700 text-slate-400 rounded-lg hover:bg-slate-900 hover:border-slate-600 hover:text-slate-300 transition-all text-sm font-mono"
+                    className={clsx(
+                      "w-full px-4 py-3 rounded-lg transition-all text-sm font-mono border",
+                      theme === "dark"
+                        ? "border-slate-700 text-slate-400 hover:bg-slate-900 hover:border-slate-600 hover:text-slate-300"
+                        : "border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 hover:text-gray-900",
+                    )}
                   >
                     Reset
                   </button>
@@ -328,14 +555,26 @@ export function DocumentSigner({ documentHash, onSigned }: DocumentSignerProps) 
           )}
 
           {error && (
-            <div className="mt-6 rounded-lg border border-rose-500/30 bg-rose-500/5 p-5">
+            <div
+              className={clsx(
+                "mt-6 rounded-lg border p-5",
+                theme === "dark" ? "border-rose-500/30 bg-rose-500/5" : "border-rose-200 bg-rose-50",
+              )}
+            >
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-rose-500/10 border border-rose-500/30 rounded-lg flex-shrink-0">
-                  <AlertCircle className="w-5 h-5 text-rose-400" />
+                <div
+                  className={clsx(
+                    "p-2 border rounded-lg flex-shrink-0",
+                    theme === "dark" ? "bg-rose-500/10 border-rose-500/30" : "bg-rose-100 border-rose-200",
+                  )}
+                >
+                  <AlertCircle className={clsx("w-5 h-5", theme === "dark" ? "text-rose-400" : "text-rose-700")} />
                 </div>
                 <div>
-                  <span className="font-mono font-bold text-rose-400 block mb-1">ERROR</span>
-                  <p className="text-sm text-slate-400">{error}</p>
+                  <span className={clsx("font-mono font-bold block mb-1", theme === "dark" ? "text-rose-400" : "text-rose-700")}>
+                    ERROR
+                  </span>
+                  <p className={clsx("text-sm", theme === "dark" ? "text-slate-400" : "text-gray-700")}>{error}</p>
                 </div>
               </div>
             </div>
